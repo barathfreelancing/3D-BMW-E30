@@ -1,0 +1,110 @@
+/* ==========================================================================
+   TOKENS — adapted from the BMW M design language (DESIGN.md, VoltAgent
+   awesome-design-md / bmw-m), not copied:
+     · graphite studio canvas, off-white ink, body copy one step down
+     · heavy display vs. light body: the weight contrast is the hierarchy
+     · hairlines, never shadows; zero radius
+     · the M tricolour is a SIGNAL, never a fill: 3 hairline segments beside
+       an index, an active marker, a focus ring. Nothing else is coloured.
+   Spacing is a 4px base: 4 8 12 16 24 40 64 96.
+   ========================================================================== */
+
+:root {
+  --bg: #1c1f23;
+  /* The studio around the car: charcoal graphite with a subtle steel-blue
+     gradient — cool overhead, a steel-blue band at the horizon behind the
+     car, back to charcoal at floor level where the reflective floor fades
+     out. Cool, desaturated tones are the complement of the red paint. */
+  --studio-top: #1e252d;
+  --studio-mid: #232a33;
+  --studio-horizon: #2b343e;
+  --studio-floor: #1d2025;
+  --ink: #f1f1ef;
+  --body: #c5c6c9;       /* running text */
+  --muted: #9a9ca1;      /* labels, captions — 6:1 on --bg */
+  --faint: #4a4e54;      /* decorative only (never text) */
+  --hairline: #3a3e44;
+  --hairline-strong: #50555c;
+  --surface-1: #2c2f34;
+
+  /* M tricolour, used as a signal only */
+  --m-light: #56b2e8;
+  --m-dark: #1c5bb8;
+  --m-red: #e22718;
+  --accent: var(--m-red);
+
+  /* Written by RigDriver from the scroll rig. Never animated in CSS, never
+     in React: the atmosphere and the camera can therefore never desync. */
+  --veil: 0;     /* 0 = fully lit, 1 = black */
+  --energy: 0;   /* 0 = calm editorial, 1 = motorsport */
+  --dark: 1;     /* prologue: 1 = studio blacked out, 0 = studio lit */
+
+  --u: 4px;
+  --margin: clamp(20px, 4.4vw, 72px);
+  --gutter: clamp(16px, 2vw, 32px);
+  --section: clamp(64px, 12vh, 128px);
+  --nav-h: 64px;
+  --beat-h: 112svh;   /* every beat is ~one screen of scroll: the film's unit */
+
+  --font-display: 'Archivo Variable', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;   /* never scroll sideways */
+}
+
+img, svg, canvas { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+ol, ul { list-style: none; margin: 0; padding: 0; }
+h1, h2, h3, p { margin: 0; }
+
+/* Selection and focus are the accent's job. */
+::selection { background: var(--m-dark); color: #fff; }
+
+:focus-visible {
+  outline: 1px solid var(--m-light);
+  outline-offset: 6px;
+}
+
+/* Lenis (recommended base styles) */
+html.lenis, html.lenis body { height: auto; }
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  /* Hard guarantee that the story is legible with no animation at all.
+     GSAP writes inline opacity/visibility/transform during reveals; this
+     overrides them so nothing can ever be left invisible. */
+  [data-rx] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+  .callout { opacity: 1 !important; }
+  .grade__grain { animation: none !important; }
+}
