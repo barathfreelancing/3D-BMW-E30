@@ -152,11 +152,15 @@ export const e30Story = {
         lines: ['Some cars are', 'built to win.'],
         ease: 'power2.inOut',
         layout: 'left-lower',
-        cam: cam(7.6, 1.92, 6.4, 0, 0.68, 0.2, 25, 0.2),
-        model: { ry: -0.62, rz: 0.014 },
-        // the studio comes back up; the lamps settle to a low running glow
-        light: { env: 0.5, key: 0.42, rim: 1.8, exp: 0.82, energy: 0, lamps: 0.35, dark: 0 },
-        veil: 0.08,
+        // AGGRESSIVE: low (bumper height), front three-quarter, the nose aimed
+        // just past the viewer and dipped a touch — the car crouched to pounce.
+        // A short swing from the prologue's head-on close-up.
+        cam: cam(3.3, 0.5, 6.4, 0, 0.62, 0.7, 30, 0.2),
+        model: { ry: 0.12, rx: 0.012, rz: 0.006 },
+        // the studio comes back up, darker and harder than the rest of the
+        // film; the lamps stay bright, glaring at the viewer
+        light: { env: 0.34, key: 0.36, rim: 2.2, exp: 0.86, energy: 0.06, lamps: 1, dark: 0 },
+        veil: 0.04,
       }),
       beat('legends', {
         kind: 'line',
@@ -166,7 +170,8 @@ export const e30Story = {
         cam: cam(-3.4, 1.15, 6.0, 0, 0.6, 0.1, 28, -0.27),
         desktop: { fov: 26 },
         model: { ry: -0.24 },
-        light: { env: 0.56, key: 0.5, rim: 1.3, exp: 0.84, energy: 0.05 },
+        // lamps settle back to a low running glow for the rest of the film
+        light: { env: 0.56, key: 0.5, rim: 1.3, exp: 0.84, energy: 0.05, lamps: 0.35 },
         veil: 0.05,
       }),
       beat('name', {

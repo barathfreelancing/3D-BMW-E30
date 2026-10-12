@@ -783,6 +783,7 @@ function RigDriver({ groupRef, reducedMotion, introRef, mobile }) {
   const applied = useRef({ fov: NaN, sx: NaN, sy: NaN, w: 0, h: 0 })
   const lastDom = useRef({ veil: -1, energy: -1, final: -1, dark: -1 })
   const frameCount = useRef(0)
+  const stare = useRef(0)
 
   // Subtle pointer parallax (fine pointers only, off under reduced motion).
   useEffect(() => {
@@ -872,7 +873,22 @@ function RigDriver({ groupRef, reducedMotion, introRef, mobile }) {
     const node = group?.node
     if (node && group) {
       const o = group.offset
-      node.rotation.set(r.rx, r.ry, r.rz)
+      // AGGRESSIVE STARE: on the opening beat the car turns its nose square at
+      // the viewer (yaw toward the camera, a crouching dip), and its gaze
+      // drifts after the cursor. `stare` eases in/out with the beat.
+      const wantStare = runtime.beat === 'open' && !reducedMotion ? 1 : 0
+      stare.current = damp(stare.current, wantStare, 3, dt)
+      const s = stare.current
+      let ry = r.ry
+      let rx = r.rx
+      if (s > 0.001) {
+        const carX = o[0] + r.mx
+        const carZ = o[2] + r.mz
+        const aim = Math.atan2(camera.position.x - carX, camera.position.z - carZ)
+        ry = THREE.MathUtils.lerp(r.ry, aim + p.x * 0.8, s)
+        rx = THREE.MathUtils.lerp(r.rx, 0.03 - p.y * 0.1, s)
+      }
+      node.rotation.set(rx, ry, r.rz)
       node.position.set(o[0] + r.mx, o[1] + r.my, o[2] + r.mz)
       node.scale.setScalar(r.ms)
     }
