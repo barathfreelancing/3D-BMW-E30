@@ -1,0 +1,647 @@
+/* ==========================================================================
+   LAYERS (root stacking context)
+      0 atmosphere pool   1 fixed 3D canvas   2 scene veil
+      3 page text         4 projected callouts
+     50 nav + progress   60 grade (vignette / grain / final veil)
+    100 loader
+
+   Two separate veils on purpose. The scene veil sits directly above the canvas
+   and below the type, so the car can emerge out of near-black while the
+   opening line stays fully legible. The final veil is inside .grade and takes
+   the whole frame down at the very end of the film.
+
+   Ancestors of z0/z3/z4 elements must NOT create stacking contexts (no
+   transform / opacity / filter / will-change on .story, .chapter or .beat) or a
+   beat's giant year can never sit behind the car.
+   ========================================================================== */
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute; left: var(--margin); top: -100px;
+  padding: 10px 15px; background: var(--ink); color: var(--bg);
+  font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.skip-link:focus { top: 10px; z-index: 200; }
+
+/* ---------- atmosphere --------------------------------------------------- */
+
+/* THE STUDIO. Everything behind the car (z0) — the canvas is transparent, so
+   the 3D floor in ModelScene sits on top of these layers and blends into
+   them. Built to frame red: cool graphite and gunmetal (the complement of the
+   paint), a blue-grey haze where the car stands, architectural softboxes on
+   the far wall, and one restrained warm spill at floor level. All of it is
+   SECONDARY: low contrast, no saturated colour except the paint itself.
+   `--energy` (the motorsport channel) raises the haze and the spill a touch. */
+.atmos { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: var(--bg); }
+
+/* graphite ceiling -> gunmetal horizon band -> near-black floor */
+.atmos__base {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg,
+      var(--studio-top) 0%,
+      var(--studio-mid) 38%,
+      var(--studio-horizon) 60%,
+      var(--studio-floor) 78%,
+      var(--bg) 100%);
+}
+
+/* far wall: three soft vertical softboxes, the way a studio's light panels
+   read out of focus behind a car. Cool, faint, fading out top and bottom. */
+.atmos__panels { position: absolute; inset: 0; }
+.atmos__panel {
+  position: absolute; top: 4%; height: 62%;
+  background: linear-gradient(180deg,
+    rgba(205, 216, 232, 0) 0%,
+    rgba(205, 216, 232, var(--panel-a, 0.05)) 34%,
+    rgba(205, 216, 232, var(--panel-a, 0.05)) 66%,
+    rgba(205, 216, 232, 0) 100%);
+  filter: blur(var(--panel-blur, 26px));
+}
+.atmos__panel--1 { left: 9%;  width: 2.2vw; --panel-a: 0.055; }
+.atmos__panel--2 { left: 31%; width: 0.6vw; --panel-a: 0.07; --panel-blur: 10px; }
+.atmos__panel--3 { right: 7%; width: 7vw; --panel-a: 0.04; --panel-blur: 40px; }
+.atmos__panel--4 { right: 23%; width: 0.5vw; --panel-a: 0.06; --panel-blur: 8px; }
+
+/* blue-grey haze where the car stands: separates the red from the dark */
+.atmos__haze {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(48% 36% at 62% 52%, rgba(112, 140, 172, calc(0.12 + var(--energy) * 0.04)), transparent 70%),
+    radial-gradient(80% 30% at 50% 64%, rgba(92, 116, 144, 0.08), transparent 75%);
+}
+
+/* the only warm light in the room: a low red spill off the paint onto the floor */
+.atmos__spill {
+  position: absolute; inset: 0;
+  background: radial-gradient(34% 12% at 62% 72%, rgba(190, 34, 26, calc(0.06 + var(--energy) * 0.06)), transparent 72%);
+}
+
+/* technical scale along the floor edge: hairline ticks, the M signal at the
+   origin. Read as a measured studio, never as UI. */
+.atmos__scale {
+  position: absolute; left: var(--margin); right: var(--margin); bottom: 22px;
+  height: 9px;
+  background:
+    repeating-linear-gradient(90deg, rgba(241, 241, 239, 0.18) 0 1px, transparent 1px 80px) bottom / 100% 9px no-repeat,
+    repeating-linear-gradient(90deg, rgba(241, 241, 239, 0.08) 0 1px, transparent 1px 16px) bottom / 100% 4px no-repeat;
+  border-bottom: 1px solid rgba(241, 241, 239, 0.07);
+}
+.atmos__void { position: absolute; inset: 0; background: #000; opacity: var(--dark); }
+.atmos__scale::before {
+  content: ''; position: absolute; left: 0; bottom: -1px; width: 30px; height: 2px;
+  background: linear-gradient(90deg, var(--m-light) 0 33%, var(--m-dark) 33% 66%, var(--m-red) 66%);
+  opacity: 0.7;
+}
+
+/* Above the car, below the type: the opening is nearly black and the car is
+   revealed out of it, but the opening line never loses contrast. */
+.veil-scene {
+  position: fixed; inset: 0; z-index: 2;
+  background: var(--bg);
+  opacity: var(--veil);
+  pointer-events: none;
+}
+
+/* Above everything: vignette, grain and the closing veil. Pure CSS, no images,
+   no per-frame JS — the driven channels arrive as custom properties. */
+.grade { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+
+.grade__vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(125% 95% at 50% 46%, transparent 50%, rgba(10, 12, 15, 0.16) 82%, rgba(10, 12, 15, 0.32) 100%);
+}
+
+.grade__grain {
+  position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 1.4s steps(6) infinite;
+  will-change: transform;
+}
+
+@keyframes grain {
+  0%   { transform: translate3d(0, 0, 0); }
+  20%  { transform: translate3d(-2%, 1.5%, 0); }
+  40%  { transform: translate3d(1.5%, -1%, 0); }
+  60%  { transform: translate3d(-1%, -2%, 0); }
+  80%  { transform: translate3d(2%, 1%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.grade__veil { position: absolute; inset: 0; background: var(--bg); opacity: var(--final); }
+
+/* ---------- prologue: scroll space, no type ------------------------------ */
+.prologue { position: relative; }
+.beat--prologue { min-height: 100svh; }
+.prologue__cue {
+  position: absolute; left: 50%; bottom: calc(var(--u) * 8);
+  width: 1px; height: 56px; overflow: hidden;
+  background: rgba(243, 243, 241, 0.08);
+}
+.prologue__hint {
+  position: absolute; left: 50%; bottom: calc(var(--u) * 8 + 72px);
+  transform: translateX(-50%); white-space: nowrap;
+  color: rgba(243, 243, 241, 0.9);
+  animation: hint-pulse 2.4s ease-in-out infinite;
+}
+@keyframes hint-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.prologue__cue-line {
+  position: absolute; left: 0; top: 0; width: 1px; height: 100%;
+  background: rgba(243, 243, 241, 0.55);
+  animation: cue-drop 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes cue-drop {
+  0% { transform: translateY(-100%); }
+  60%, 100% { transform: translateY(100%); }
+}
+
+/* ---------- 3D canvas ---------------------------------------------------- */
+
+.scene {
+  position: fixed; top: 0; left: 0; width: 100%;
+  height: 100vh; height: 100lvh;   /* lvh: no resize jitter when mobile URL bar moves */
+  z-index: 1; pointer-events: none;
+  opacity: 0;
+}
+.scene.is-visible { opacity: 1; transition: opacity 1.6s ease; }
+.scene > div, .scene canvas { width: 100%; height: 100%; }
+/* r3f's wrapper sets pointer-events:auto; the canvas must never eat clicks. */
+.scene, .scene * { pointer-events: none !important; }
+
+.scene__notice {
+  position: absolute; left: var(--margin); bottom: calc(var(--u) * 8);
+  max-width: 32ch; color: var(--muted);
+  display: grid; gap: calc(var(--u) * 1);
+}
+.scene__notice-key { color: var(--accent); }
+
+/* ---------- navigation --------------------------------------------------- */
+
+.nav {
+  opacity: calc(1 - var(--dark));
+  position: fixed; inset: 0 0 auto 0; z-index: 50;
+  height: var(--nav-h);
+  padding: 0 var(--margin);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--gutter);
+  pointer-events: none;   /* only the links catch the pointer */
+}
+.nav a { pointer-events: auto; }
+/* Functional, not decorative: copy scrolling under the nav fades out before
+   it can collide with the brand mark. */
+.nav::before {
+  content: ''; position: absolute; inset: 0 0 -40px 0; z-index: -1;
+  background: linear-gradient(to bottom, var(--studio-top) 0%, rgba(30, 37, 45, 0.86) 45%, rgba(30, 37, 45, 0) 100%);
+}
+
+.nav__brand { display: flex; align-items: center; gap: calc(var(--u) * 3); min-height: 44px; }
+.nav__brand-name {
+  white-space: nowrap;
+  font-family: var(--font-display); font-weight: 760; font-stretch: 116%;
+  font-size: 0.8125rem; letter-spacing: 0.06em; color: var(--ink);
+}
+
+.nav__chapters { display: flex; align-items: center; gap: calc(var(--u) * 6); }
+.nav__current { min-width: 14em; text-align: right; white-space: nowrap; }
+.nav__list { display: flex; }
+.nav__link {
+  position: relative; display: grid; place-items: center;
+  min-width: 40px; min-height: 44px;
+  color: var(--muted);
+  transition: color 0.3s ease;
+}
+.nav__link:hover, .nav__link[aria-current='true'] { color: var(--ink); }
+.nav__link::after {
+  content: ''; position: absolute; left: 25%; right: 25%; bottom: 10px; height: 1px;
+  background: var(--accent); transform: scaleX(0); transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav__link[aria-current='true']::after { transform: scaleX(1); }
+
+@media (max-width: 810px) {
+  .nav__current { display: none; }
+  .nav__link { min-width: 32px; }
+}
+
+/* ---------- scroll progress ---------------------------------------------- */
+
+.progress {
+  opacity: calc(1 - var(--dark));
+  position: fixed; z-index: 50; right: 14px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: flex-end; gap: calc(var(--u) * 3);
+  pointer-events: none;
+}
+.progress__label { display: none; }
+.progress__track { position: relative; width: 1px; height: 96px; background: var(--hairline); }
+.progress__fill {
+  position: absolute; inset: 0; background: var(--ink);
+  transform: scaleY(0); transform-origin: top;
+}
+@media (max-width: 810px) {
+  .progress { right: 6px; }
+  .progress__label { display: none; }
+  .progress__track { height: 64px; }
+}
+
+/* ---------- loading ------------------------------------------------------ */
+
+.loader {
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--bg);
+  display: flex; align-items: flex-end;
+  padding: 0 var(--margin) calc(var(--u) * 10);
+  transition: opacity 0.9s ease, visibility 0.9s;
+}
+.loader.is-done { opacity: 0; visibility: hidden; }
+.loader__body { display: grid; gap: calc(var(--u) * 2); }
+.loader__status { display: flex; gap: calc(var(--u) * 4); }
+.loader__pct { color: var(--ink); }
+.loader__continue {
+  margin-top: calc(var(--u) * 2);
+  padding: calc(var(--u) * 1.5) calc(var(--u) * 3);
+  color: var(--ink); background: none;
+  border: 1px solid var(--hairline); cursor: pointer;
+}
+.loader__continue:hover, .loader__continue:focus-visible { border-color: var(--ink); }
+.loader__line { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--hairline); }
+.loader__line > span {
+  display: block; height: 100%; background: var(--ink);
+  transform-origin: left; transition: transform 0.3s ease-out;
+}
+
+/* ---------- story shell -------------------------------------------------- */
+/* Deliberately NOT a stacking context: see the layer note at the top. */
+
+.story { position: relative; }
+.chapter { position: relative; }
+
+/* masked display lines: the inner span rises out of an overflow-hidden box */
+.mask { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.mask > span { display: block; }
+
+/* ---------- chapter head: archive index, then the title ----------------- */
+
+.chapter__head {
+  position: relative; z-index: 3;
+  padding: 30svh var(--margin) 10svh;
+  display: grid; gap: calc(var(--u) * 5);
+  justify-items: start;
+}
+.chapter__index { display: flex; align-items: center; gap: calc(var(--u) * 3); }
+.chapter__num { color: var(--ink); }
+.chapter__title { max-width: 14ch; }
+
+/* ---------- hero: the opening title card -------------------------------- */
+
+.hero__frame {
+  position: absolute; z-index: 3; inset: 0 0 auto 0;
+  height: 100svh;
+  pointer-events: none;
+}
+.hero__frame a { pointer-events: auto; }
+.hero .chapter__head {
+  position: absolute; top: calc(var(--nav-h) + 7svh); left: 0;
+  padding: 0 var(--margin);
+}
+.hero .chapter__title { font-size: clamp(2.2rem, 3.8vw, 4.2rem); }
+/* the opening line shares the frame with the whole car: one step smaller */
+.hero .beat[data-beat='open'] .t-statement { font-size: clamp(2.5rem, 5.6vw, 6.2rem); }
+/* After the prologue: the title card and the opening line only exist once
+   the studio comes back up (`--dark` 1 -> 0, written by the rig), and the
+   line starts a half-screen below the title so it can never scroll across
+   it on the way to its held slot. */
+.hero__frame > *,
+.hero .beat[data-beat='open'] .beat__inner { opacity: clamp(0, calc(1 - var(--dark) * 1.7), 1); }
+/* padding, not margin: a first child's margin collapses out through the
+   beat and the section and would never move the line */
+.hero .beat[data-beat='open'] { padding-top: 50svh; }
+.hero .beat[data-beat='open'] .beat__inner { margin-top: 0; }
+/* the visitor is already scrolling by now: no "scroll to enter" */
+.hero__base .cue { display: none; }
+.hero .hero__base { justify-content: flex-end; }
+.hero__base {
+  position: absolute; left: var(--margin); right: var(--margin); bottom: calc(var(--u) * 8);
+  display: flex; align-items: flex-end; justify-content: space-between; gap: var(--gutter);
+}
+.hero__signature { display: grid; gap: calc(var(--u) * 2); justify-items: end; text-align: right; }
+.hero__signature-name {
+  font-family: var(--font-display); font-weight: 760; font-stretch: 116%;
+  font-size: clamp(1rem, 1.5vw, 1.4rem); letter-spacing: 0.02em; color: var(--ink);
+}
+
+.cue {
+  display: inline-flex; align-items: center; gap: calc(var(--u) * 3);
+  min-height: 44px; color: var(--ink);
+}
+.cue__line { width: 40px; height: 1px; background: var(--ink); transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s; }
+.cue:hover .cue__line { width: 64px; background: var(--accent); }
+
+/* ---------- beats --------------------------------------------------------
+   A beat is one screen of scroll. Its text (.beat__inner) is HELD at a slot
+   with position: sticky while the camera settles, then released as the next
+   beat enters — the title-card rhythm of a film. Slots:
+     left | right | centre   ×   upper | lower        ('flow' = not held)
+   Every beat must stay ≥ 0.9 viewports tall (see useStoryTimeline.measure).
+   ------------------------------------------------------------------------- */
+
+.beat {
+  --upper: calc(var(--nav-h) + 9svh);
+  --lower: 60svh;
+  position: relative;
+  min-height: var(--beat-h);
+  padding: 0 var(--margin);
+}
+
+.beat__inner {
+  position: sticky; z-index: 3;
+  top: var(--hold, var(--upper));
+  display: grid; gap: calc(var(--u) * 5);
+  justify-items: start;
+  width: min(100%, 44rem);
+  /* Close-up framings keep the type off the paint (e30Story.js); a faint
+     graphite halo covers the edges where a line still crosses it. */
+  text-shadow: 0 0 22px rgba(24, 28, 33, 0.45);
+  /* Gap between consecutive held texts: the next one enters 24svh below the
+     one leaving, never stacked against it. */
+  margin-top: 24svh;
+}
+.beat[data-layout$='upper'] { --hold: var(--upper); }
+.beat[data-layout$='lower'] { --hold: var(--lower); }
+.beat[data-layout^='right'] .beat__inner { margin-left: auto; justify-items: end; text-align: right; }
+.beat[data-layout^='centre'] .beat__inner { margin-inline: auto; justify-items: center; text-align: center; }
+
+/* beats with type behind the car hold their text lower, under the subject */
+.beat--word, .beat--number { --lower: 70svh; }
+
+.beat__label { color: var(--muted); }
+.beat__label-line { display: block; }
+.beat .t-title { font-size: clamp(2.2rem, 5.2vw, 5.6rem); }
+.beat__inner:has(.t-title) { width: min(100%, 60rem); }
+.beat__lines { display: block; }
+.beat__body { margin-top: calc(var(--u) * -1); }
+.beat[data-layout^='centre'] .beat__body { max-width: 40ch; }
+.beat__kicker { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 6); }
+.beat__caption { padding-top: calc(var(--u) * 2); border-top: 1px solid var(--hairline); }
+
+/* ---------- the back layer: type BEHIND the car (z0 < canvas z1) ---------
+   Zero-height sticky rows, so they overlay the beat without pushing the held
+   text; `translate` (not transform) centres them, leaving `transform` free
+   for the GSAP reveal. */
+
+.beat__back, .beat__year {
+  position: sticky; z-index: 0;
+  top: 50svh; height: 0;
+  display: flex; justify-content: center;
+  pointer-events: none; user-select: none;
+}
+.beat__back > *, .beat__year { translate: 0 -50%; }
+.beat__year {
+  color: rgba(241, 241, 239, 0.1);
+  justify-content: flex-start;
+  margin-left: -0.04em;
+}
+/* Sized by length so every word spans ~70% of the frame: short words have
+   wide glyphs (M, W), hence the +0.6. */
+.beat__back .t-word { font-size: min(26rem, calc(92vw / (var(--chars, 4) + 0.6))); }
+
+/* ---------- inspection: index, subject, statement, annotation ----------- */
+
+.beat__index { display: flex; align-items: center; gap: calc(var(--u) * 3); color: var(--ink); }
+.beat__index-subject { color: var(--muted); padding-left: calc(var(--u) * 2); }
+.beat__figure { display: grid; gap: calc(var(--u) * 3); }
+.beat__figure-sub { color: var(--body); letter-spacing: 0.2em; }
+.beat__subject { font-size: clamp(2.2rem, calc(64vw / var(--chars, 8)), 7rem); }
+.beat--callout .beat__inner { gap: calc(var(--u) * 4); width: min(100%, 34rem); }
+.beat--callout .t-statement--sm { color: var(--body); }
+
+/* 05 — THE ICON: the text is an annotation around the car, not a document */
+.chapter--design .beat--callout .beat__subject { font-size: clamp(1.6rem, 2.8vw, 2.8rem); }
+.chapter--design .beat--callout .t-statement--sm { font-size: clamp(1.6rem, 2.9vw, 3.1rem); color: var(--ink); }
+.chapter--design .beat--callout .beat__inner { width: min(100%, 30rem); }
+
+/* 06 — THE LEGACY: the quietest chapter */
+.chapter--legacy .t-statement { font-size: clamp(2.2rem, 5.2vw, 5.8rem); }
+
+/* ---------- spec: technical facts, as an editorial annotation ---------- */
+
+.spec {
+  display: grid; width: min(100%, 26rem);
+  margin: calc(var(--u) * 2) 0 0;
+  border-top: 1px solid var(--hairline-strong);
+}
+.spec__row {
+  display: grid; grid-template-columns: 1fr auto; gap: var(--gutter);
+  align-items: baseline;
+  padding: calc(var(--u) * 3) 0;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+}
+.spec__row dt { margin: 0; }
+.spec__value {
+  margin: 0;
+  font-family: var(--font-display); font-weight: 500; font-size: 0.9375rem;
+  color: var(--ink); white-space: nowrap;
+}
+.spec-block { display: grid; gap: calc(var(--u) * 3); }
+.spec__qualifier { max-width: 26rem; }
+
+/* ---------- the 5,000 moment ------------------------------------------- */
+
+.beat--number .t-numeral { font-size: clamp(7rem, 34vw, 36rem); }
+
+/* ---------- flow beats: ledgers, generations, end of film -------------------- */
+
+.beat[data-layout='flow'] .beat__inner {
+  position: relative; top: auto;
+  width: 100%; margin-top: 0;
+  padding: 16svh 0 12svh;
+  gap: calc(var(--u) * 6);
+}
+
+/* results ledger: an archive register, hairline rows, the year as index.
+   Kept to the left ~40% of the frame: the car holds the right. */
+.ledger {
+  display: grid; width: min(100%, 34rem); margin-top: calc(var(--u) * 4);
+  border-top: 1px solid var(--hairline-strong);
+}
+.ledger__row {
+  display: grid; grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--gutter); align-items: baseline;
+  padding: calc(var(--u) * 4) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.ledger__year { color: var(--ink); }
+.ledger__entry { display: grid; gap: calc(var(--u) * 1); }
+.ledger__series {
+  font-family: var(--font-display); font-weight: 500; font-size: clamp(1rem, 1.25vw, 1.2rem);
+  letter-spacing: -0.01em; color: var(--ink);
+}
+.ledger__driver {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: calc(var(--u) * 1) calc(var(--u) * 4);
+  max-width: none; font-size: clamp(0.95rem, 1.1vw, 1.05rem);
+}
+
+/* generation plates: full-bleed, a sticky stage held while the beat scrolls.
+   The stage sits at z3 (over the 3D canvas and the scene veil, under the nav
+   and the grade). Height = the scroll the timeline needs (--scroll, set by
+   GenerationGallery from its timeline length) + the one screen it holds. */
+.gallery {
+  position: relative; z-index: 3;
+  margin-inline: calc(-1 * var(--margin));
+  height: calc(var(--scroll, 600svh) + 100svh);
+}
+.gallery__stage {
+  position: sticky; top: 0;
+  height: 100svh; height: 100lvh;
+  overflow: hidden;
+  visibility: hidden;   /* GSAP shows it once the timeline is built */
+}
+.gallery__dark { position: absolute; inset: 0; background: #0a0b0d; }
+/* the pixelate morph is drawn here, over the plates, only while it runs */
+.gallery__pixels {
+  position: absolute; inset: 0; z-index: 2;
+  width: 100%; height: 100%; max-width: none;
+  visibility: hidden; pointer-events: none;
+  image-rendering: pixelated;
+}
+.gallery__panel {
+  position: absolute; inset: 0; margin: 0;
+  overflow: hidden;
+  will-change: transform, clip-path;
+}
+.gallery__img {
+  width: 100%; height: 100%; max-width: none;
+  object-fit: cover; object-position: 50% 55%;
+  will-change: transform, filter;
+}
+/* legibility for the caption only: a low gradient, not a panel */
+.gallery__panel::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(8, 9, 11, 0.82) 0%, rgba(8, 9, 11, 0.35) 30%, rgba(8, 9, 11, 0) 55%),
+    linear-gradient(to bottom, rgba(8, 9, 11, 0.55) 0%, rgba(8, 9, 11, 0) 18%);
+}
+.gallery__cap {
+  position: absolute; z-index: 1;
+  left: var(--margin); right: var(--margin); bottom: calc(var(--u) * 14);
+  display: grid; gap: calc(var(--u) * 3); justify-items: start;
+  color: var(--ink);
+}
+.gallery__index { display: flex; align-items: center; gap: calc(var(--u) * 3); color: var(--ink); }
+.gallery__code {
+  font-family: var(--font-display); font-weight: 780; font-stretch: 118%;
+  font-size: clamp(3.4rem, 10vw, 10rem); line-height: 0.82; letter-spacing: -0.04em;
+}
+.gallery__meta { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 6); }
+.gallery__meta .t-label { color: var(--body); }
+.gallery__year { color: var(--ink) !important; }
+.gallery__engine { color: var(--body); max-width: none; }
+
+/* reduced motion: plain stacked full-screen figures, nothing animated */
+.gallery--static { height: auto; }
+.gallery--static .gallery__stage { position: relative; height: auto; overflow: visible; visibility: visible; }
+.gallery--static .gallery__dark,
+.gallery--static .gallery__pixels { display: none; }
+.gallery--static .gallery__panel { position: relative; height: 100svh; }
+
+/* end of film */
+.credits { display: grid; gap: calc(var(--u) * 10); width: min(100%, 40rem); padding-top: 24svh; }
+.credits__head { display: flex; align-items: center; gap: calc(var(--u) * 3); color: var(--ink); }
+.credits__back { justify-self: start; }
+
+/* Speed chapter: shorter beats, tighter rhythm (still ≥ 0.9 viewports). */
+.chapter--speed { --beat-h: 104svh; }
+/* Design chapter: longer beats, the pace has to be able to breathe. */
+.chapter--design { --beat-h: 118svh; }
+
+/* ---------- projected callouts ------------------------------------------ */
+/* One fixed layer. Markers are positioned from the projected 3D point, so a
+   label is attached to the part of the car it describes. */
+
+.callouts { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+.callout {
+  position: absolute; top: 0; left: 0;
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+.callout.is-on { opacity: 1; }
+.callout__dot {
+  position: absolute; left: -4px; top: -4px;
+  width: 8px; height: 8px; border: 1px solid var(--ink); border-radius: 50%;
+}
+.callout__dot::after {
+  content: ''; position: absolute; inset: 2px; border-radius: 50%; background: var(--ink);
+}
+.callout__leader { position: absolute; top: 0; height: 1px; }
+.callout__tag {
+  position: absolute; top: -0.7em;
+  display: flex; align-items: baseline; gap: calc(var(--u) * 2);
+  color: var(--ink); white-space: nowrap;
+}
+.callout__index { color: var(--muted); }
+
+.callout--right .callout__leader { left: 8px; width: 88px; background: linear-gradient(90deg, var(--ink), rgba(241, 241, 239, 0.1)); }
+.callout--right .callout__tag { left: 104px; }
+.callout--left .callout__leader { right: 8px; width: 88px; background: linear-gradient(270deg, var(--ink), rgba(241, 241, 239, 0.1)); }
+.callout--left .callout__tag { right: 104px; flex-direction: row-reverse; }
+
+/* ---------- tablet ------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .beat__inner { width: min(100%, 36rem); }
+}
+
+/* ---------- mobile -------------------------------------------------------
+   The mobile rig centres the car and lifts it into the upper half, so every
+   held text moves to the lower half and aligns left: nothing covers the car. */
+
+@media (max-width: 810px) {
+  :root { --margin: 20px; --nav-h: 56px; }
+
+  .beat { --lower: 58svh; --upper: 58svh; }
+  .beat--word, .beat--number { --lower: 62svh; }
+  /* Inspection beats carry a figure, a statement and a spec list: hold the
+     block from mid-screen (under the car) and give it enough scroll to stay
+     held instead of riding up over the paint. */
+  .beat--callout { --upper: 50svh; --lower: 50svh; min-height: 150svh; }
+  /* Inspection beats carry a figure, a statement and a spec list: hold the
+     block from mid-screen (under the car) and give it enough scroll to stay
+     held instead of riding up over the paint. */
+  .beat--callout { --upper: 50svh; --lower: 50svh; min-height: 150svh; }
+  .beat[data-layout^='right'] .beat__inner,
+  .beat[data-layout^='centre'] .beat__inner { margin-inline: 0; justify-items: start; text-align: left; }
+  .beat__inner { width: 100%; gap: calc(var(--u) * 4); }
+
+  .beat__back, .beat__year { top: 32svh; }
+
+  .t-statement { font-size: clamp(2.1rem, 9.6vw, 3.2rem); }
+  .t-statement--sm, .chapter--legacy .t-statement { font-size: clamp(1.75rem, 7.6vw, 2.5rem); }
+  .chapter--design .beat--callout .t-statement--sm { font-size: clamp(1.5rem, 6.4vw, 2rem); }
+  .beat__subject { font-size: clamp(1.9rem, calc(72vw / var(--chars, 8)), 3.4rem); }
+  .chapter--design .beat--callout .beat__subject { font-size: 1.5rem; }
+  .t-figure { font-size: clamp(2.4rem, 12vw, 3.6rem); }
+
+  .chapter__head { padding: 24svh var(--margin) 8svh; }
+  .hero .chapter__head { top: calc(var(--nav-h) + 3svh); }
+  .hero__base { bottom: calc(var(--u) * 5); }
+  .hero__signature .t-label { display: none; }
+
+  .spec { width: 100%; }
+  .ledger__row { grid-template-columns: 4.5rem minmax(0, 1fr); }
+  .atmos__scale { bottom: 12px; }
+  .gallery__cap { bottom: calc(var(--u) * 10); }
+  .gallery__img { object-position: var(--focus-m, 50%) 55%; }
+  .atmos__panel--2, .atmos__panel--4 { display: none; }
+
+  /* Leader lines would collide with the type on a phone: keep the dot only. */
+  .callout__leader, .callout__tag { display: none; }
+}
